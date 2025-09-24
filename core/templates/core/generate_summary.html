@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Transcrição e Requisitos</title>
+</head>
+<body>
+  {% csrf_token %}
+  <h1>Gravar Reunião</h1>
+  <button id="recordBtn">Gravar</button>
+  <button id="stopBtn" disabled>Concluir</button>
+  <button id="cancelBtn" disabled>Cancelar</button>
+
+  <h3>Transcrição:</h3>
+  <pre id="transcription"></pre>
+
+  <h1>Requisitos Gerados</h1>
+  <div id="requisitos" style="white-space: pre-wrap; margin-top: 10px;"></div>
+
+  <script>
+    let mediaRecorder;
+    let audioChunks = [];
+    let gravaçãoAtiva = false;
+
+    const recordBtn = document.getElementById("recordBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const cancelBtn = document.getElementById("cancelBtn");
+    const transcription = document.getElementById("transcription");
+    const requisitosDiv = document.getElementById("requisitos");
+
+    const csrftoken = getCookie('csrftoken');
+
+    recordBtn.addEventListener("click", async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      audioChunks = [];
+      gravaçãoAtiva = true;
+
+      mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+
+      mediaRecorder.onstop = async () => {
+        if (!gravaçãoAtiva) return; // Cancelado
+
+        const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+        const formData = new FormData();
+        formData.append("audio", audioBlob, "gravacao.webm");
+
+        // 1️⃣ Envia para transcrição
+        const transcricaoResponse = await fetch("/transcrever/", {
+          method: "POST",
+          headers: { "X-CSRFToken": csrftoken },
+          body: formData
+        });
+
+        const transcricaoData = await transcricaoResponse.json();
+        const textoTranscrito = transcricaoData.texto;
+        transcription.textContent = textoTranscrito;
+
+        // 2️⃣ Envia transcrição para Gemini gerar requisitos
+        const geminiResponse = await fetch("/testar_gemini/", {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": csrftoken,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ texto_reuniao: textoTranscrito })
+        });
+
+        const geminiData = await geminiResponse.json();
+        requisitosDiv.innerHTML = geminiData.requisitos;
+      };
+
+      mediaRecorder.start();
+      recordBtn.disabled = true;
+      stopBtn.disabled = false;
+      cancelBtn.disabled = false;
+    });
+
+    stopBtn.addEventListener("click", () => {
+      gravaçãoAtiva = true;
+      mediaRecorder.stop();
+      recordBtn.disabled = false;
+      stopBtn.disabled = true;
+      cancelBtn.disabled = true;
+    });
+
+    cancelBtn.addEventListener("click", () => {
+      if (mediaRecorder && gravaçãoAtiva) {
+        gravaçãoAtiva = false;
+        mediaRecorder.stop();
+        audioChunks = [];
+        transcription.textContent = "";
+        requisitosDiv.innerHTML = "";
+        recordBtn.disabled = false;
+        stopBtn.disabled = true;
+        cancelBtn.disabled = true;
+      }
+    });
+
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+          cookie = cookie.trim();
+          if (cookie.startsWith(name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+  </script>
+</body>
+</html>
+
+
+
+
