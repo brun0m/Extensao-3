@@ -1,0 +1,49 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>Requisitos - Chat</title>
+    <link rel="stylesheet" href="{% static 'css/menu.css' %}">
+</head>
+<body>
+
+<div class="container">
+    <!-- Sidebar fixa -->
+    <aside class="chat-sidebar">
+        <div class="sidebar-header">
+            <h3>Chats</h3>
+        </div>
+        <ul class="chat-list">
+            {% for chat in chats|dictsortreversed:"created_at" %}
+                <li class="chat-item" data-chat-id="{{ chat.id }}">
+                    {{ chat.title|default:"Chat" }} {{ chat.id }}
+                </li>
+            {% empty %}
+                <li class="chat-item">Nenhum chat ainda</li>
+            {% endfor %}
+        </ul>
+        <button id="new-chat-btn">+ Novo Chat</button>
+    </aside>
+
+    <!-- Área principal -->
+    <main class="chat-main">
+        <div id="messages-container" class="messages"></div>
+
+        <div class="input-container">
+            <input id="message-input" type="text" placeholder="Digite sua mensagem ou grave áudio...">
+            <button id="send-btn">Enviar</button>
+            <button id="record-btn">🎙️</button>
+        </div>
+    </main>
+</div>
+
+<script src="{% static 'js/menu.js' %}"></script>
+</body>
+</html>
+
+
+
+
+

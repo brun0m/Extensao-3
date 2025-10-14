@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Transcrição e Requisitos</title>
+</head>
+<body>
+  {% csrf_token %}
+  <h1>Gravar Reunião</h1>
+  <button id="recordBtn">Gravar</button>
+  <button id="stopBtn" disabled>Concluir</button>
+  <button id="cancelBtn" disabled>Cancelar</button>
+
+  <h3>Transcrição:</h3>
+  <pre id="transcription"></pre>
+
+  <h1>Requisitos Gerados</h1>
+  <div id="requisitos" style="white-space: pre-wrap; margin-top: 10px;"></div>
+
+  <script>
+  let mediaRecorder;
+  let audioChunks = [];
+  let gravaçãoAtiva = false;
+  let requisitosData = null; // Armazena os dados JSON originais
+
+  const recordBtn = document.getElementById("recordBtn");
+  const stopBtn = document.getElementById("stopBtn");
+  const cancelBtn = document.getElementById("cancelBtn");
+  const transcription = document.getElementById("transcription");
+  const requisitosDiv = document.getElementById("requisitos");
+
+  const csrftoken = getCookie('csrftoken');
+
+  recordBtn.addEventListener("click", async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+    gravaçãoAtiva = true;
+
+    mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+
+    mediaRecorder.onstop = async () => {
+      if (!gravaçãoAtiva) return;
+
+      const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "gravacao.webm");
+
+      // 1️⃣ Transcrever
+      const transcricaoResponse = await fetch("/transcrever/", {
+        method: "POST",
+        headers: { "X-CSRFToken": csrftoken },
+        body: formData
+      });
+
+      const transcricaoData = await transcricaoResponse.json();
+      const textoTranscrito = transcricaoData.texto;
+      transcription.textContent = textoTranscrito;
+
+      // 2️⃣ Enviar para Gemini
+      const geminiResponse = await fetch("/testar_gemini/", {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": csrftoken,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ texto_reuniao: textoTranscrito })
+      });
+
+      const geminiData = await geminiResponse.json();
+
+      try {
+        requisitosData = JSON.parse(geminiData.requisitos);
+        renderRequisitos(requisitosData);
+      } catch (e) {
+        requisitosDiv.innerHTML = `<pre>${geminiData.requisitos}</pre>`;
+      }
+    };
+
+    mediaRecorder.start();
+    recordBtn.disabled = true;
+    stopBtn.disabled = false;
+    cancelBtn.disabled = false;
+  });
+
+  stopBtn.addEventListener("click", () => {
+    gravaçãoAtiva = true;
+    mediaRecorder.stop();
+    recordBtn.disabled = false;
+    stopBtn.disabled = true;
+    cancelBtn.disabled = true;
+  });
+
+  cancelBtn.addEventListener("click", () => {
+    if (mediaRecorder && gravaçãoAtiva) {
+      gravaçãoAtiva = false;
+      mediaRecorder.stop();
+      audioChunks = [];
+      transcription.textContent = "";
+      requisitosDiv.innerHTML = "";
+      recordBtn.disabled = false;
+      stopBtn.disabled = true;
+      cancelBtn.disabled = true;
+    }
+  });
+
+  // 🧠 Função que mostra os requisitos de forma editável
+  function renderRequisitos(data) {
+    requisitosDiv.innerHTML = "";
+
+    for (const [categoria, conteudo] of Object.entries(data)) {
+      const section = document.createElement("div");
+      section.innerHTML = `<h3>${categoria.replaceAll('_', ' ')}</h3>`;
+      if (Array.isArray(conteudo)) {
+        conteudo.forEach((item, index) => {
+          const itemDiv = document.createElement("div");
+          itemDiv.style.marginBottom = "10px";
+          for (const [chave, valor] of Object.entries(item)) {
+            itemDiv.innerHTML += `
+              <label>${chave}:</label>
+              <input type="text" data-categoria="${categoria}" data-index="${index}" data-campo="${chave}" value="${valor}" style="width: 90%;"><br>
+            `;
+          }
+          section.appendChild(itemDiv);
+        });
+      } else if (typeof conteudo === "object") {
+        for (const [prioridade, lista] of Object.entries(conteudo)) {
+          section.innerHTML += `<h4>${prioridade.toUpperCase()}</h4>`;
+          lista.forEach((texto, index) => {
+            section.innerHTML += `
+              <input type="text" data-categoria="${categoria}" data-sub="${prioridade}" data-index="${index}" value="${texto}" style="width: 90%;"><br>
+            `;
+          });
+        }
+      }
+      requisitosDiv.appendChild(section);
+    }
+
+    // Botão para salvar alterações
+    const saveBtn = document.createElement("button");
+    saveBtn.textContent = "Salvar Alterações";
+    saveBtn.style.marginTop = "20px";
+    saveBtn.onclick = saveChanges;
+    requisitosDiv.appendChild(saveBtn);
+  }
+
+  // 🧩 Atualiza o objeto JSON com os valores editados
+  function saveChanges() {
+    const inputs = requisitosDiv.querySelectorAll("input");
+
+    inputs.forEach(input => {
+      const categoria = input.dataset.categoria;
+      const campo = input.dataset.campo;
+      const index = input.dataset.index;
+      const sub = input.dataset.sub;
+
+      if (sub) {
+        requisitosData[categoria][sub][index] = input.value;
+      } else if (campo) {
+        requisitosData[categoria][index][campo] = input.value;
+      }
+    });
+
+    // Envia JSON atualizado para o servidor
+    fetch("/salvar_requisitos/", {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": csrftoken,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(requisitosData)
+    });
+
+    alert("Requisitos atualizados com sucesso!");
+  }
+
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.startsWith(name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+</script>
+
+</body>
+</html>
+
+
+
+

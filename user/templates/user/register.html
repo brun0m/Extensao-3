@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Cadastro{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2>Cadastro</h2>
+
+    <!-- Mensagens de erro -->
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li class="error">{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <form id="registerForm" method="POST" action="{% url 'register' %}">
+        {% csrf_token %}
+        <input type="text" name="username" placeholder="Nome de usuário" required>
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="password" name="password1" placeholder="Senha" required>
+        <input type="password" name="password2" placeholder="Confirmar senha" required>
+        <button type="submit">Cadastrar</button>
+    </form>
+
+    <p>Já tem conta? <a href="{% url 'login' %}">Entre aqui</a></p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/register.js' %}"></script>
+{% endblock %}
+

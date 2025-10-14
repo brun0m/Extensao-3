@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Cadastro{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <h2>Cadastro</h2>
+    <form id="cadastroForm" method="POST">
+        {% csrf_token %}
+        <input type="text" name="username" placeholder="Nome de usuário" required>
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="password" name="password1" placeholder="Senha" required>
+        <input type="password" name="password2" placeholder="Confirme a senha" required>
+        <button type="submit">Cadastrar</button>
+    </form>
+    <p>Já tem conta? <a href="{% url 'login' %}">Login</a></p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/login.js' %}"></script>
+{% endblock %}

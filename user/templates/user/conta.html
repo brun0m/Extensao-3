@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Minha Conta{% endblock %}
+
+{% block body %}
+<div class="container-conta">
+  <h1>Minha Conta</h1>
+  <p>Usuário: {{ user.username }}</p>
+  <p>Email: {{ user.email }}</p>
+  <p>Celular: {{ user.celular }}</p>
+  <p>Data de Nascimento: {{ user.data_nascimento }}</p>
+
+  <form method="POST" action="{% url 'deletar_conta' %}" onsubmit="return confirm('Tem certeza que deseja excluir sua conta?');">
+    {% csrf_token %}
+    <button type="submit" class="btn-danger">Excluir Conta</button>
+  </form>
+</div>
+{% endblock %}

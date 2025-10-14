@@ -3,16 +3,35 @@
 venv/
 env/
 
-# Arquivos do Python
+# Bytecode
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.sqlite3
 
-# Arquivos do Django
-*.log
+# Database
 db.sqlite3
 
-# Configs locais
+# Django logs & local settings
+*.log
+local_settings.py
 .env
+
+# IDE/editor
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Static/build outputs
+/staticfiles/
+*.sqlite3
+
+# node / build
+node_modules/
+dist/
+
