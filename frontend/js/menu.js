@@ -122,7 +122,51 @@ function appendMessage(sender, text) {
     div.classList.add('message', sender);
     div.innerHTML = text;
     container.appendChild(div);
+
+    // Se a mensagem for da IA, adiciona o botão logo abaixo dela
+    if (sender === 'ai') {
+        const btn = document.createElement('button');
+        btn.textContent = "📄 Exportar para PDF";
+        btn.classList.add('pdf-btn');
+        btn.onclick = () => gerarPDF(currentChatId);
+
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('pdf-btn-container');
+        wrapper.appendChild(btn);
+        container.appendChild(wrapper);
+    }
+
     container.scrollTop = container.scrollHeight;
+}
+
+if (data.ai_message) {
+    appendMessage('ai', formatAIResponse(data.ai_message));
+
+    // Adiciona o botão de gerar PDF abaixo da última resposta
+    const container = document.getElementById('messages-container');
+    const btn = document.createElement('button');
+    btn.textContent = "📄 Gerar PDF";
+    btn.classList.add('pdf-btn');
+    btn.onclick = () => gerarPDF(currentChatId);
+    container.appendChild(btn);
+}
+
+async function gerarPDF(chatId) {
+    try {
+        const res = await fetch(`user_messages/gerar_pdf/${chatId}/`);
+        if (!res.ok) throw new Error("Erro ao gerar PDF.");
+
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "documentacao_requisitos.pdf";
+        a.click();
+        window.URL.revokeObjectURL(url);
+    } catch (err) {
+        alert("Erro ao gerar PDF. Veja o console.");
+        console.error(err);
+    }
 }
 
 // Pega cookie CSRF

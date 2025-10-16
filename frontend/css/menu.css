@@ -15,6 +15,8 @@ body {
 /* Sidebar fixa */
 .chat-sidebar {
     width: 280px;
+    min-width: 280px; /* 🔒 trava o tamanho fixo */
+    flex-shrink: 0;   /* 🔒 impede de encolher */
     background-color: #222;
     color: white;
     display: flex;
@@ -64,6 +66,7 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    background-color: #f8f9fa;
     padding: 20px;
 }
 
@@ -122,6 +125,26 @@ body {
 #record-btn {
     background-color: #28a745;
     color: white;
+}
+
+.pdf-btn-container {
+    text-align: right;
+    margin-top: 5px;
+}
+
+.pdf-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: 0.3s;
+}
+
+.pdf-btn:hover {
+    background-color: #0056b3;
 }
 
 
