@@ -226,8 +226,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function gerarPDF(chatId) {
         try {
-            const res = await fetch(`/user_messages/gerar_pdf/${chatId}/`);
+            const res = await fetch(`/user_messages/gerar_pdf/${chatId}/`, {
+                method: "GET",
+                headers: { "X-CSRFToken": getCookie("csrftoken") },
+                credentials: "same-origin"
+            });
             if (!res.ok) throw new Error("Erro ao gerar PDF.");
+
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
@@ -236,8 +241,8 @@ document.addEventListener("DOMContentLoaded", () => {
             a.click();
             window.URL.revokeObjectURL(url);
         } catch (err) {
-            console.error("Erro ao gerar PDF:", err);
             alert("Erro ao gerar PDF. Veja o console.");
+            console.error("Erro ao gerar PDF:", err);
         }
     }
 
